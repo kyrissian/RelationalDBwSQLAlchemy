@@ -1,6 +1,6 @@
 """
 Assignment: Relational Database Management with SQLAlchemy
-Author: Kyris
+Author: Kathy Booth (with assistance from Claude & CoPilot)
 Description:
     Practice creating and managing a relational database using Python
     and SQLAlchemy. Defines tables, sets up relationships, and performs
@@ -9,13 +9,11 @@ Description:
 
 # ---------- Part 1: Setup ----------
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Boolean, select, func
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 engine = create_engine('sqlite:///shop.db')
 Base = declarative_base()
 Session = sessionmaker(bind=engine)  # pylint: disable=invalid-name
-session = Session()
 
 
 # ---------- Part 2: Define Tables ----------
@@ -34,8 +32,8 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(100))
-    email = Column(String(200), unique=True)
+    name = Column(String(100), nullable=False)
+    email = Column(String(200), unique=True, nullable=False)
 
     orders = relationship("Order", back_populates="user", cascade="all, delete-orphan")
 
@@ -54,8 +52,8 @@ class Product(Base):
     __tablename__ = "products"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(100))
-    price = Column(Integer)
+    name = Column(String(100), nullable=False)
+    price = Column(Integer, nullable=False)
 
     orders = relationship("Order", back_populates="product")
 
@@ -77,10 +75,10 @@ class Order(Base):
     __tablename__ = "orders"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    product_id = Column(Integer, ForeignKey("products.id"))
-    quantity = Column(Integer)
-    status = Column(Boolean, default=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    status = Column(Boolean, default=False, nullable=False)
 
     user = relationship("User", back_populates="orders")
     product = relationship("Product", back_populates="orders")
@@ -91,7 +89,7 @@ Base.metadata.create_all(engine)
 
 
 # ---------- Part 4: Insert Data ----------
-def insert_sample_data():
+def insert_sample_data(session):
     """
     Inserts sample users, products, and orders into the database.
 
@@ -115,31 +113,40 @@ def insert_sample_data():
 
     if not existing_users:
         # 5 users — Marcus has no orders and will be deleted in Part 5
-        user1 = User(name="Kathy",   email="kathy@example.com")
-        user2 = User(name="Andrea",  email="andrea@example.com")
-        user3 = User(name="Brendan", email="brendan@example.com")
-        user4 = User(name="LuLu",    email="lulu@example.com")
-        user5 = User(name="Marcus",  email="marcus@example.com")
+        users = {
+            "Kathy": User(name="Kathy", email="kathy@example.com"),
+            "Andrea": User(name="Andrea", email="andrea@example.com"),
+            "Brendan": User(name="Brendan", email="brendan@example.com"),
+            "LuLu": User(name="LuLu", email="lulu@example.com"),
+            "Marcus": User(name="Marcus", email="marcus@example.com"),
+        }
 
         # 5 products
-        product1 = Product(name="Laptop",     price=1200)
-        product2 = Product(name="Headphones", price=150)
-        product3 = Product(name="Mouse",      price=40)
-        product4 = Product(name="Keyboard",   price=80)
-        product5 = Product(name="Webcam",     price=100)
+        products = {
+            "Laptop": Product(name="Laptop", price=1200),
+            "Headphones": Product(name="Headphones", price=150),
+            "Mouse": Product(name="Mouse", price=40),
+            "Keyboard": Product(name="Keyboard", price=80),
+            "Webcam": Product(name="Webcam", price=100),
+        }
 
-        session.add_all([user1, user2, user3, user4, user5,
-                         product1, product2, product3, product4, product5])
-        session.commit()
+        for user in users.values():
+            session.add(user)
+
+        for product in products.values():
+            session.add(product)
 
         # 5 orders spread across 4 users (Marcus has none)
-        order1 = Order(user_id=user1.id, product_id=product1.id, quantity=1, status=True)
-        order2 = Order(user_id=user1.id, product_id=product3.id, quantity=2, status=False)
-        order3 = Order(user_id=user2.id, product_id=product2.id, quantity=1, status=False)
-        order4 = Order(user_id=user3.id, product_id=product4.id, quantity=3, status=True)
-        order5 = Order(user_id=user4.id, product_id=product5.id, quantity=2, status=False)
+        orders = [
+            Order(user=users["Kathy"], product=products["Laptop"], quantity=1, status=True),
+            Order(user=users["Kathy"], product=products["Mouse"], quantity=2, status=False),
+            Order(user=users["Andrea"], product=products["Headphones"], quantity=1, status=False),
+            Order(user=users["Brendan"], product=products["Keyboard"], quantity=3, status=True),
+            Order(user=users["LuLu"], product=products["Webcam"], quantity=2, status=False),
+        ]
 
-        session.add_all([order1, order2, order3, order4, order5])
+        for order in orders:
+            session.add(order)
         session.commit()
 
         print("Sample data inserted.\n")
@@ -147,7 +154,7 @@ def insert_sample_data():
         print("Data already exists — skipping insert.\n")
 
 
-def query_all_users():
+def query_all_users(session):
     """Retrieves and prints all users in the database."""
     print("--- All Users ---")
     users = session.execute(select(User)).scalars().all()
@@ -155,7 +162,7 @@ def query_all_users():
         print(f"  id={u.id} | name={u.name} | email={u.email}")
 
 
-def query_all_products():
+def query_all_products(session):
     """Retrieves and prints all products with their name and price."""
     print("\n--- All Products ---")
     products = session.execute(select(Product)).scalars().all()
@@ -163,7 +170,7 @@ def query_all_products():
         print(f"  {p.name}: ${p.price}")
 
 
-def query_all_orders():
+def query_all_orders(session):
     """
     Retrieves and prints all orders, showing the user's name,
     product name, quantity, and shipping status.
@@ -175,7 +182,7 @@ def query_all_orders():
         print(f"  {o.user.name} ordered {o.quantity}x {o.product.name} [{shipped}]")
 
 
-def update_product_price(product_name, new_price):
+def update_product_price(session, product_name, new_price):
     """
     Updates the price of a product by name.
 
@@ -196,19 +203,18 @@ def update_product_price(product_name, new_price):
         print(f"  No product named '{product_name}' found.")
 
 
-def delete_user_by_name(name):
+def delete_user_by_id(session, user_id):
     """
-    Deletes a user from the database by name.
+    Deletes a user from the database by ID.
 
     If the user has existing orders and cascade delete is configured,
-    those orders will be removed automatically. For best results,
-    use this on a user with no orders to demonstrate a clean deletion.
+    those orders will be removed automatically.
 
     Args:
-        name (str): The name of the user to delete.
+        user_id (int): The ID of the user to delete.
     """
-    print(f"\n--- Deleting user: {name} ---")
-    user = session.execute(select(User).where(User.name == name)).scalars().first()
+    print(f"\n--- Deleting user with id={user_id} ---")
+    user = session.execute(select(User).where(User.id == user_id)).scalars().first()
     if user:
         order_count = len(user.orders)
         print(f"  Deleting: {user.name} (id={user.id}) — had {order_count} order(s)")
@@ -216,16 +222,16 @@ def delete_user_by_name(name):
         session.commit()
         print("  Deleted successfully.")
     else:
-        print(f"  No user named '{name}' found.")
+        print(f"  No user with id={user_id} found.")
 
 
-def query_unshipped_orders():
+def query_unshipped_orders(session):
     """
     Bonus: Retrieves and prints all orders that have not yet been shipped
     (status=False).
     """
     print("\n--- Unshipped Orders ---")
-    unshipped = session.execute(select(Order).where(Order.status == False)).scalars().all()  # pylint: disable=singleton-comparison
+    unshipped = session.execute(select(Order).where(Order.status.is_(False))).scalars().all()
     if unshipped:
         for o in unshipped:
             print(f"  Order {o.id}: {o.quantity}x {o.product.name} for {o.user.name}")
@@ -233,7 +239,7 @@ def query_unshipped_orders():
         print("  No unshipped orders.")
 
 
-def query_order_count_per_user():
+def query_order_count_per_user(session):
     """
     Bonus: Counts and prints the total number of orders placed by each user,
     using a SQL GROUP BY aggregation.
@@ -241,7 +247,7 @@ def query_order_count_per_user():
     print("\n--- Order Count per User ---")
     results = session.execute(
         select(User.name, func.count(Order.id))  # pylint: disable=not-callable
-        .join(Order, Order.user_id == User.id)
+        .outerjoin(Order, Order.user_id == User.id)
         .group_by(User.name)
     ).all()
     for name, count in results:
@@ -250,11 +256,17 @@ def query_order_count_per_user():
 
 # ---------- Run all steps ----------
 if __name__ == "__main__":
-    insert_sample_data()
-    query_all_users()
-    query_all_products()
-    query_all_orders()
-    update_product_price("Laptop", 1100)
-    delete_user_by_name("Marcus")
-    query_unshipped_orders()
-    query_order_count_per_user()
+    with Session() as db_session:
+        insert_sample_data(db_session)
+        query_all_users(db_session)
+        query_all_products(db_session)
+        query_all_orders(db_session)
+        update_product_price(db_session, "Laptop", 1100)
+        marcus = db_session.execute(select(User).where(User.name == "Marcus")).scalars().first()
+        if marcus:
+            delete_user_by_id(db_session, marcus.id)
+        else:
+            print("\n--- Deleting user by ID ---")
+            print("  Marcus was already deleted in a prior run.")
+        query_unshipped_orders(db_session)
+        query_order_count_per_user(db_session)
