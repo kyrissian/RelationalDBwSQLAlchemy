@@ -112,6 +112,15 @@ To start fresh, simply delete `shop.db` and rerun the script.
 | Part 5 | Query all users, products, and orders; update a price; delete a user by ID |
 | Part 6 | Bonus — `status` column, unshipped orders query, order count per user      |
 
+## Rubric Checklist
+
+- Part 1 (Setup): engine/base/session configured in `relational_db_sqla.py`
+- Part 2 (Tables + Relationships): `User`, `Product`, `Order` classes with foreign keys and `relationship()` mappings
+- Part 3 (Create Tables): `Base.metadata.create_all(engine)`
+- Part 4 (Insert Data): `insert_sample_data(session)` adds and commits users/products/orders
+- Part 5 (Queries + Update + Delete by ID): `query_all_users`, `query_all_products`, `query_all_orders`, `update_product_price`, `delete_user_by_id`, `run_delete_user_by_id_demo`
+- Part 6 Bonus: `status` column in `Order`, plus `query_unshipped_orders` and `query_order_count_per_user`
+
 ---
 
 ## Sample Data

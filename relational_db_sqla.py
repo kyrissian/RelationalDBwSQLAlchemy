@@ -225,6 +225,21 @@ def delete_user_by_id(session, user_id):
         print(f"  No user with id={user_id} found.")
 
 
+def run_delete_user_by_id_demo(session, target_name="Marcus"):
+    """
+    Demonstrates the Part 5 delete-by-ID requirement using a known user.
+
+    Args:
+        target_name (str): Name used to look up a user ID for deletion.
+    """
+    target_user = session.execute(select(User).where(User.name == target_name)).scalars().first()
+    if target_user:
+        delete_user_by_id(session, target_user.id)
+    else:
+        print("\n--- Deleting user by ID ---")
+        print(f"  '{target_name}' was already deleted in a prior run.")
+
+
 def query_unshipped_orders(session):
     """
     Bonus: Retrieves and prints all orders that have not yet been shipped
@@ -262,11 +277,6 @@ if __name__ == "__main__":
         query_all_products(db_session)
         query_all_orders(db_session)
         update_product_price(db_session, "Laptop", 1100)
-        marcus = db_session.execute(select(User).where(User.name == "Marcus")).scalars().first()
-        if marcus:
-            delete_user_by_id(db_session, marcus.id)
-        else:
-            print("\n--- Deleting user by ID ---")
-            print("  Marcus was already deleted in a prior run.")
+        run_delete_user_by_id_demo(db_session)
         query_unshipped_orders(db_session)
         query_order_count_per_user(db_session)
