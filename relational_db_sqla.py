@@ -1,6 +1,6 @@
 """
 Assignment: Relational Database Management with SQLAlchemy
-Author: Kyris
+Author: Kathy Booth (with contributions from Claude & GitHub Copilot)
 Description:
     Practice creating and managing a relational database using Python
     and SQLAlchemy. Defines tables, sets up relationships, and performs
@@ -118,21 +118,21 @@ def insert_sample_data(session):
 
         Users:
                 - Kathy, Andrea, Brendan, LuLu each receive at least one order.
-                - Marcus is intentionally left without any orders so he can be
-                    used to demonstrate a clean user deletion in Part 5.
+                - Marcus is intentionally given two orders so deleting him by ID
+                    demonstrates cascade delete removing associated orders.
 
     Products:
         Five products are created across a range of price points.
 
     Orders:
-        Five orders are distributed across four users, with a mix of
+        Seven orders are distributed across all five users, with a mix of
         shipped (status=True) and unshipped (status=False) orders for
         use in the Bonus queries.
     """
     existing_users = session.execute(select(User)).scalars().first()
 
     if not existing_users:
-        # 5 users — Marcus has no orders and will be deleted in Part 5
+        # 5 users — Marcus has orders and will be deleted in Part 5
         users = {
             "Kathy": User(name="Kathy", email="kathy@example.com"),
             "Andrea": User(name="Andrea", email="andrea@example.com"),
@@ -156,13 +156,15 @@ def insert_sample_data(session):
         for product in products.values():
             session.add(product)
 
-        # 5 orders spread across 4 users (Marcus has none)
+        # 7 orders spread across all 5 users (Marcus has 2)
         orders = [
             Order(user=users["Kathy"], product=products["Laptop"], quantity=1, status=True),
             Order(user=users["Kathy"], product=products["Mouse"], quantity=2, status=False),
             Order(user=users["Andrea"], product=products["Headphones"], quantity=1, status=False),
             Order(user=users["Brendan"], product=products["Keyboard"], quantity=3, status=True),
             Order(user=users["LuLu"], product=products["Webcam"], quantity=2, status=False),
+            Order(user=users["Marcus"], product=products["Mouse"], quantity=1, status=False),
+            Order(user=users["Marcus"], product=products["Webcam"], quantity=2, status=True),
         ]
 
         for order in orders:

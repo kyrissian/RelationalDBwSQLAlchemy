@@ -108,7 +108,7 @@ To start fresh, simply delete `shop.db` and rerun the script.
 | Part 1 | Setup — engine, base, session                                              |
 | Part 2 | Define `User`, `Product`, and `Order` tables with relationships            |
 | Part 3 | Create tables using `Base.metadata.create_all(engine)`                     |
-| Part 4 | Insert 5 users, 5 products, and 5 orders                                   |
+| Part 4 | Insert 5 users, 5 products, and 7 orders                                   |
 | Part 5 | Query all users, products, and orders; update a price; delete a user by ID |
 | Part 6 | Bonus — `status` column, unshipped orders query, order count per user      |
 
@@ -127,13 +127,13 @@ To start fresh, simply delete `shop.db` and rerun the script.
 
 ### Users (5 total)
 
-| Name    | Note                                     |
-| ------- | ---------------------------------------- |
-| Kathy   | 2 orders (Laptop, Mouse)                 |
-| Andrea  | 1 order (Headphones)                     |
-| Brendan | 1 order (Keyboard)                       |
-| LuLu    | 1 order (Webcam)                         |
-| Marcus  | No orders — used to demonstrate deletion |
+| Name    | Note                                                             |
+| ------- | ---------------------------------------------------------------- |
+| Kathy   | 2 orders (Laptop, Mouse)                                         |
+| Andrea  | 1 order (Headphones)                                             |
+| Brendan | 1 order (Keyboard)                                               |
+| LuLu    | 1 order (Webcam)                                                 |
+| Marcus  | 2 orders (Mouse, Webcam) — deleted to demonstrate cascade delete |
 
 ### Products (5 total)
 
@@ -151,7 +151,7 @@ To start fresh, simply delete `shop.db` and rerun the script.
 
 **Duplicate prevention:** The insert function checks whether any users already exist before inserting, so re-running the script does not create duplicate rows.
 
-**Intentional orderless user:** Marcus is created with no orders so that the delete-by-ID operation in Part 5 demonstrates a clean, dependency-free deletion without needing to handle cascades.
+**Cascade delete demonstration:** Marcus is intentionally given 2 orders so that when he is deleted in Part 5, SQLAlchemy's `cascade="all, delete-orphan"` automatically removes his orders too — no manual cleanup required.
 
 **`if __name__ == "__main__":`** All executable code is wrapped in this guard so the models and functions can be safely imported by other scripts without triggering the insert/query/delete operations.
 
