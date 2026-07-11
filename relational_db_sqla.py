@@ -1,6 +1,6 @@
 """
 Assignment: Relational Database Management with SQLAlchemy
-Author: Kathy Booth (with assistance from Claude & CoPilot)
+Author: Kyris
 Description:
     Practice creating and managing a relational database using Python
     and SQLAlchemy. Defines tables, sets up relationships, and performs
@@ -8,8 +8,8 @@ Description:
 """
 
 # ---------- Part 1: Setup ----------
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Boolean, select, func
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Boolean, select, func, CheckConstraint
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship, selectinload
 
 engine = create_engine('sqlite:///shop.db')
 Base = declarative_base()
@@ -37,6 +37,9 @@ class User(Base):
 
     orders = relationship("Order", back_populates="user", cascade="all, delete-orphan")
 
+    def __repr__(self):
+        return f"User(id={self.id}, name={self.name!r}, email={self.email!r})"
+
 
 class Product(Base):
     """
@@ -50,12 +53,18 @@ class Product(Base):
     """
 
     __tablename__ = "products"
+    __table_args__ = (
+        CheckConstraint("price >= 0", name="ck_products_price_non_negative"),
+    )
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
     price = Column(Integer, nullable=False)
 
     orders = relationship("Order", back_populates="product")
+
+    def __repr__(self):
+        return f"Product(id={self.id}, name={self.name!r}, price={self.price})"
 
 
 class Order(Base):
@@ -73,6 +82,9 @@ class Order(Base):
     """
 
     __tablename__ = "orders"
+    __table_args__ = (
+        CheckConstraint("quantity > 0", name="ck_orders_quantity_positive"),
+    )
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -82,6 +94,14 @@ class Order(Base):
 
     user = relationship("User", back_populates="orders")
     product = relationship("Product", back_populates="orders")
+
+    def __repr__(self):
+        return (
+            "Order("
+            f"id={self.id}, user_id={self.user_id}, product_id={self.product_id}, "
+            f"quantity={self.quantity}, status={self.status}"
+            ")"
+        )
 
 
 # ---------- Part 3: Create Tables ----------
@@ -96,10 +116,10 @@ def insert_sample_data(session):
     Only runs if the database is empty, preventing duplicate rows
     on subsequent script executions.
 
-    Users:
-        - Kathy, Andrea, Brendan, LuLu each receive at least one order.
-        - Marcus is intentionally left without any orders so he can be
-          used to demonstrate a clean user deletion in Part 5.
+        Users:
+                - Kathy, Andrea, Brendan, LuLu each receive at least one order.
+                - Marcus is intentionally left without any orders so he can be
+                    used to demonstrate a clean user deletion in Part 5.
 
     Products:
         Five products are created across a range of price points.
@@ -176,7 +196,9 @@ def query_all_orders(session):
     product name, quantity, and shipping status.
     """
     print("\n--- All Orders ---")
-    orders = session.execute(select(Order)).scalars().all()
+    orders = session.execute(
+        select(Order).options(selectinload(Order.user), selectinload(Order.product))
+    ).scalars().all()
     for o in orders:
         shipped = "shipped" if o.status else "not shipped"
         print(f"  {o.user.name} ordered {o.quantity}x {o.product.name} [{shipped}]")
@@ -191,11 +213,18 @@ def update_product_price(session, product_name, new_price):
         new_price (int): The new price to set in dollars.
     """
     print(f"\n--- Updating {product_name} price ---")
+    if new_price < 0:
+        print("  Price cannot be negative.")
+        return
+
     product = (session.execute(select(Product)
                .where(Product.name == product_name))
                .scalars().first())
     if product:
         print(f"  Old price: ${product.price}")
+        if product.price == new_price:
+            print("  Price unchanged; no update needed.")
+            return
         product.price = new_price
         session.commit()
         print(f"  New price: ${product.price}")
@@ -205,13 +234,15 @@ def update_product_price(session, product_name, new_price):
 
 def delete_user_by_id(session, user_id):
     """
-    Deletes a user from the database by ID.
+    Deletes a user from the database by their primary key ID.
 
-    If the user has existing orders and cascade delete is configured,
-    those orders will be removed automatically.
+    Because cascade="all, delete-orphan" is configured on User.orders,
+    any orders belonging to the deleted user are automatically removed
+    from the orders table as well — no manual cleanup required.
+    This demonstrates referential integrity enforced at the ORM level.
 
     Args:
-        user_id (int): The ID of the user to delete.
+        user_id (int): The primary key ID of the user to delete.
     """
     print(f"\n--- Deleting user with id={user_id} ---")
     user = session.execute(select(User).where(User.id == user_id)).scalars().first()
@@ -246,7 +277,11 @@ def query_unshipped_orders(session):
     (status=False).
     """
     print("\n--- Unshipped Orders ---")
-    unshipped = session.execute(select(Order).where(Order.status.is_(False))).scalars().all()
+    unshipped = session.execute(
+        select(Order)
+        .where(Order.status.is_(False))
+        .options(selectinload(Order.user), selectinload(Order.product))
+    ).scalars().all()
     if unshipped:
         for o in unshipped:
             print(f"  Order {o.id}: {o.quantity}x {o.product.name} for {o.user.name}")

@@ -4,7 +4,7 @@
 ![SQLAlchemy](https://img.shields.io/badge/SQLALCHEMY-D71F00?style=for-the-badge&logo=sqlalchemy&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-000?style=for-the-badge&logo=sqlite&logoColor=07405E)
 
-**Author:** Kathy Booth (with assistance from Claude & CoPilot)  
+**Author:** Kathy Booth (with contributions from Claude and GitHub Copilot)
 **Course:** Coding Temple — Database Module  
 **Assignment:** Relational Database Practice with Python and SQLAlchemy
 
@@ -152,8 +152,6 @@ To start fresh, simply delete `shop.db` and rerun the script.
 **Duplicate prevention:** The insert function checks whether any users already exist before inserting, so re-running the script does not create duplicate rows.
 
 **Intentional orderless user:** Marcus is created with no orders so that the delete-by-ID operation in Part 5 demonstrates a clean, dependency-free deletion without needing to handle cascades.
-
-**Cascade delete:** `cascade="all, delete-orphan"` is set on `User.orders` so that if a user who _does_ have orders is deleted, their orders are automatically removed — preventing foreign key constraint errors.
 
 **`if __name__ == "__main__":`** All executable code is wrapped in this guard so the models and functions can be safely imported by other scripts without triggering the insert/query/delete operations.
 
